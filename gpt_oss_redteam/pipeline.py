@@ -12,7 +12,8 @@ from .utils import ensure_dir, write_jsonl
 
 
 def is_refusal_strict(text: str) -> bool:
-    return text.strip() == "I'm sorry, but I can't help with that."
+    # Exact match on the model's refusal string (curly quotes)
+    return text.strip() == "I’m sorry, but I can’t help with that."
 
 
 def run_generation(
