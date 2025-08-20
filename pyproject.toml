@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gpt-oss-redteam"
+version = "0.1.0"
+description = "Simple, reproducible red teaming pipeline for GPT-OSS via Ollama with DeepSeek-based prompt generation"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+  { name = "K Power" }
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "openai>=1.44.0",
+  "tqdm>=4.66.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/kpower7/gpt-oss-redteam"
+Documentation = "https://github.com/kpower7/gpt-oss-redteam"
+
+[project.scripts]
+gpt-oss-redteam = "gpt_oss_redteam.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["gpt_oss_redteam"]
