@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gpt-oss-redteam"
-version = "0.1.2"
+version = "0.1.3"
 description = "Simple, reproducible red teaming pipeline for GPT-OSS via Ollama with DeepSeek-based prompt generation"
 readme = "README.md"
 requires-python = ">=3.9"

@@ -5,8 +5,12 @@ from typing import Dict, Iterable, List, Tuple
 from tqdm import tqdm
 
 from . import __version__
-from .deepseek import generate_for_prompts
-from .ollama_client import call_ollama, DEFAULT_OLLAMA_MODEL
+from .deepseek import (
+    generate_for_prompts as deepseek_generate_for_prompts,
+    DEFAULT_DEEPSEEK_BASE_URL,
+)
+from .ollama_gen import generate_for_prompts as ollama_generate_for_prompts
+from .ollama_client import call_ollama, DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_BASE_URL
 from .tools import get_fake_tools
 from .utils import ensure_dir, write_jsonl
 
@@ -22,17 +26,48 @@ def run_generation(
     batch_size: int = 10,
     temperature: float = 1.3,
     deepseek_model: str = None,
+    generator_backend: str = None,
+    generator_model: str = None,
     out_jsonl_path: str = None,
     request_interval_s: float = 0.0,
 ) -> List[Tuple[str, str]]:
-    pairs = generate_for_prompts(
-        high_level_prompts,
-        runs_per_prompt=runs_per_prompt,
-        batch_size=batch_size,
-        temperature=temperature,
-        model=deepseek_model or os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
-        request_interval_s=request_interval_s,
-    )
+    """Generate concrete prompts from high-level seeds.
+
+    Defaults to using an Ollama-hosted generator. DeepSeek remains available by
+    setting generator_backend="deepseek" (or via CLI env flags).
+    """
+    backend = (generator_backend or os.getenv("GENERATOR_BACKEND") or "ollama").lower()
+    if backend.startswith("olla"):
+        eff_model = (
+            generator_model
+            or os.getenv("OLLAMA_GEN_MODEL")
+            or os.getenv("OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL)
+        )
+        pairs = ollama_generate_for_prompts(
+            high_level_prompts,
+            runs_per_prompt=runs_per_prompt,
+            batch_size=batch_size,
+            temperature=temperature,
+            model=eff_model,
+            request_interval_s=request_interval_s,
+        )
+        gen_backend = "ollama"
+        gen_model = eff_model
+        gen_base_url = DEFAULT_OLLAMA_BASE_URL
+    else:
+        eff_model = deepseek_model or os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+        pairs = deepseek_generate_for_prompts(
+            high_level_prompts,
+            runs_per_prompt=runs_per_prompt,
+            batch_size=batch_size,
+            temperature=temperature,
+            model=eff_model,
+            request_interval_s=request_interval_s,
+        )
+        gen_backend = "deepseek"
+        gen_model = eff_model
+        gen_base_url = DEFAULT_DEEPSEEK_BASE_URL
+
     if out_jsonl_path:
         ensure_dir(os.path.dirname(out_jsonl_path))
         write_jsonl(
@@ -41,6 +76,9 @@ def run_generation(
                 {
                     "source": src,
                     "generated": gen,
+                    "generator_backend": gen_backend,
+                    "generator_model": gen_model,
+                    "generator_base_url": gen_base_url,
                 }
                 for (src, gen) in pairs
             ),

@@ -33,6 +33,8 @@ def cmd_generate(args: argparse.Namespace) -> None:
         batch_size=args.generation_batch_size,
         temperature=args.generation_temperature,
         deepseek_model=args.deepseek_model,
+        generator_backend=args.generator_backend,
+        generator_model=args.generator_model,
         out_jsonl_path=out_gens,
         request_interval_s=args.generation_interval,
     )
@@ -86,6 +88,8 @@ def cmd_all(args: argparse.Namespace) -> None:
         batch_size=args.generation_batch_size,
         temperature=args.generation_temperature,
         deepseek_model=args.deepseek_model,
+        generator_backend=args.generator_backend,
+        generator_model=args.generator_model,
         out_jsonl_path=out_gens,
         request_interval_s=args.generation_interval,
     )
@@ -119,12 +123,16 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--out", required=True, help="Path to write starter prompts file")
     s.set_defaults(func=cmd_init)
 
-    s = sub.add_parser("generate", help="Generate adversarial prompts via DeepSeek")
+    s = sub.add_parser("generate", help="Generate adversarial prompts via DeepSeek or Ollama")
     s.add_argument("--prompts-file", required=True)
     s.add_argument("--runs-per-prompt", type=int, default=100)
     s.add_argument("--generation-batch-size", type=int, default=10)
     s.add_argument("--generation-temperature", type=float, default=1.3)
-    s.add_argument("--generation-interval", type=float, default=0.0, help="sleep seconds between DeepSeek calls")
+    s.add_argument("--generation-interval", type=float, default=0.0, help="sleep seconds between DeepSeek/Ollama calls")
+    # Generation backend and model selection
+    s.add_argument("--generator-backend", choices=["ollama", "deepseek"], default=os.getenv("GENERATOR_BACKEND", "ollama"), help="Which backend to use for prompt generation")
+    s.add_argument("--generator-model", default=None, help="If backend=ollama, the Ollama tag for the generator (e.g., qwen2.5:7b-instruct). If backend=deepseek, the DeepSeek model id.")
+    # Back-compat: allow explicit deepseek model override
     s.add_argument("--deepseek-model", default=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"))
     s.add_argument("--out-dir", default=None)
     s.set_defaults(func=cmd_generate)
@@ -148,6 +156,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--generation-batch-size", type=int, default=10)
     s.add_argument("--generation-temperature", type=float, default=1.3)
     s.add_argument("--generation-interval", type=float, default=0.0)
+    # Generation backend and model selection (defaults to Ollama)
+    s.add_argument("--generator-backend", choices=["ollama", "deepseek"], default=os.getenv("GENERATOR_BACKEND", "ollama"))
+    s.add_argument("--generator-model", default=None)
     s.add_argument("--deepseek-model", default=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"))
     s.add_argument("--system-prompt", default=None)
     s.add_argument("--ollama-model", default=os.getenv("OLLAMA_MODEL", "gpt-oss:20b"))
