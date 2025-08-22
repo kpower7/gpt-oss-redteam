@@ -14,5 +14,6 @@ runs/
 .vscode/
 docs/
 examples/
+results/visualization_generator.py
+visualizations/
 findings/
-gpt_oss_redteam/comprehensive_analysis.py
