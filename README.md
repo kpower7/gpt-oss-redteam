@@ -71,14 +71,6 @@ Outputs:
 - `runs/<timestamp>/inference.jsonl` – every model run with raw JSON response.
 - `runs/<timestamp>/analysis.json` and `analysis.md` – refusal rate and 95% CI.
 
-## Results (5,200 runs)
-
-- Strict refusals: 3,790
-- Refusal rate: 0.729
-- 95% Wilson CI: [0.717, 0.741]
-
-See `PAPER.md` for per–high‑level prompt breakdowns and discussion.
-
 ## Configuration via CLI flags or environment variables
 
 - `GENERATOR_BACKEND` – default `ollama`; set to `deepseek` to use DeepSeek.
