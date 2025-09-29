@@ -4,7 +4,7 @@ A minimal, reproducible pipeline for red teaming local GPT‑OSS models served v
 
 - Prompt generation: DeepSeek API transforms high‑level HITL prompts into many concrete adversarial prompts.
 - Local inference: Ollama hosts an open(ish) model (default: `gpt-oss:20b`), queried via OpenAI‑compatible chat API.
-- Tool‑use priming: A fake tools manifest encourages “tool thoughts” without executing any tools.
+- Tool‑use priming: Choose at runtime between no tools, a fake tools manifest, or an MCP‑derived (propose‑only) tool manifest.
 - Logging: Each run is serialized to JSONL, including the full raw model response (when available) for offline analysis.
 - Analysis: A tiny analyzer computes strict refusal rate with a Wilson 95% confidence interval.
 
@@ -80,8 +80,15 @@ Entry point: `gpt_oss_redteam/cli.py` exposes five subcommands.
     --system-prompt "<your system prompt>" \
     --ollama-model gpt-oss:20b \
     --inference-interval 0.0 \
+    --tool-mode fake \
+    --mcp-registry-json examples/mcp/registry.json \
     --out-dir runs
   ```
+
+  Tool modes:
+  - `--tool-mode none`: do not provide any tools (`tool_choice=None`).
+  - `--tool-mode fake` (default): inject built‑in OpenAI‑style fake tools (see `gpt_oss_redteam/tools.py`).
+  - `--tool-mode mcp`: load an MCP‑style registry and convert it to OpenAI function tools; recommended to pass `--mcp-registry-json` to a static registry (see `examples/mcp/registry.json`).
 
 - `analyze`: Compute refusal rate and Wilson 95% CI from an inference JSONL file.
 
@@ -104,6 +111,8 @@ Entry point: `gpt_oss_redteam/cli.py` exposes five subcommands.
     --system-prompt "<your system prompt>" \
     --ollama-model gpt-oss:20b \
     --inference-interval 0.0 \
+    --tool-mode mcp \
+    --mcp-registry-json examples/mcp/registry.json \
     --out-dir runs
   ```
 
@@ -122,15 +131,15 @@ Minimal, reproducible core: DeepSeek → Ollama → JSONL logs → Analysis.
 
 ---
 
-## 5. Fake tools manifest (tool‑use priming)
+## 5. Tool manifests (tool‑use priming)
 
-The package injects a fake tools manifest to encourage tool‑oriented reasoning without executing anything.
+The package can inject tool manifests to encourage tool‑oriented reasoning without executing anything.
 
-- Each tool is a “function” with a single string argument named `input` with description "put all information here".
+- Modes:
+  - Fake tools: Each tool is a “function” with a single string argument named `input` with description "put all information here". Source: `gpt_oss_redteam/tools.py`.
+  - MCP‑derived tools: Structured JSON Schemas (from an MCP‑style registry) are converted to OpenAI function tools via `gpt_oss_redteam/mcp_tools.py`. Default is propose‑only; tools are not executed.
+
 - Example names (subset): `web.search`, `web.scrape`, `db.lookup`, `db.update`, `email.send`, `slack.post_message`, `system.shutdown`, `system.update_config`.
-- Source: `gpt_oss_redteam/tools.py`:
-  - `_DEFAULT_TOOL_NAMES` is the fixed list used by default.
-  - `get_fake_tools()` constructs the JSON schema used by the OpenAI chat API for tools.
 
 This manifest shapes the assistant’s internal chain‑of‑thought about tools while ensuring no tool is ever actually executed by this package.
 
@@ -167,6 +176,10 @@ Each line corresponds to one prompt sent to Ollama. Fields include:
   - function_call, tool_calls
   - tools_used_names (from `message.tool_calls`)
   - tool_manifest_names (names included in the injected manifest)
+- runtime labels
+  - runtime_client (e.g., `"ollama"`)
+  - runtime_tool_mode in {`"none"`, `"fake"`, `"mcp"`}
+  - mcp_registry_source (e.g., `"file:examples/mcp/registry.json"` when MCP mode is used)
 - raw: the entire response via `resp.model_dump()`
 
 Exact refusal string (strict):

@@ -153,6 +153,86 @@ def fig_plain_vs_tool(comparison: Dict, run_ids: List[str], run_labels: Dict[str
     return fig
 
 
+def fig_overall_by_mode(detailed_by_run: Dict[str, Dict], run_ids: List[str], run_labels: Dict[str, str]):
+    # Collect union of modes across selected runs
+    mode_set = set()
+    for rid in run_ids:
+        info = detailed_by_run.get(rid, {})
+        by_mode = info.get("by_runtime_tool_mode", {})
+        mode_set.update(by_mode.keys())
+    if not mode_set:
+        return None
+    # Prefer a consistent ordering
+    preferred = ["none", "fake", "mcp"]
+    modes = [m for m in preferred if m in mode_set] + [m for m in sorted(mode_set) if m not in preferred]
+
+    x = np.arange(len(run_ids))
+    width = max(0.12, 0.7 / max(1, len(modes)))
+    fig, ax = plt.subplots(figsize=(max(6, 1.2 * len(run_ids)), 4))
+
+    colors = {
+        "none": "#7f7f7f",
+        "fake": "#9467bd",
+        "mcp": "#2ca02c",
+    }
+
+    # For each mode, build series per run
+    for i, mode in enumerate(modes):
+        ys = []
+        lo_arr, hi_arr = [], []
+        for rid in run_ids:
+            info = detailed_by_run.get(rid, {})
+            bm = info.get("by_runtime_tool_mode", {}).get(mode)
+            if not bm:
+                ys.append(np.nan)
+                lo_arr.append(0.0)
+                hi_arr.append(0.0)
+                continue
+            ov = bm.get("overall") or {}
+            rate = ov.get("refusal_rate")
+            ci = ov.get("ci95") or [None, None]
+            if rate is None:
+                ys.append(np.nan)
+                lo_arr.append(0.0)
+                hi_arr.append(0.0)
+            else:
+                ys.append(rate * 100)
+                lo, hi = ci[0], ci[1]
+                if lo is None or hi is None:
+                    lo_arr.append(0.0)
+                    hi_arr.append(0.0)
+                else:
+                    lo_arr.append(rate * 100 - lo * 100)
+                    hi_arr.append(hi * 100 - rate * 100)
+
+        offset = (i - (len(modes) - 1) / 2) * width
+        bars = ax.bar(x + offset, ys, width, label=mode, color=colors.get(mode, None), alpha=0.85, edgecolor='black')
+        # Only draw error bars for finite entries
+        yerr = [[], []]
+        x_pos = []
+        for j, (y, loe, hie) in enumerate(zip(ys, lo_arr, hi_arr)):
+            if not np.isnan(y):
+                x_pos.append(x[j] + offset)
+                yerr[0].append(loe)
+                yerr[1].append(hie)
+        if x_pos:
+            ax.errorbar(x_pos, [ys[j] for j in range(len(ys)) if not np.isnan(ys[j])], yerr=yerr, fmt='none', color='black', capsize=4, capthick=1.2)
+
+        for bar, y in zip(bars, ys):
+            if not np.isnan(y):
+                ax.text(bar.get_x() + bar.get_width()/2., y + 0.6, f"{y:.1f}%", ha='center', va='bottom', fontsize=8)
+
+    ax.set_ylabel('Refusal Rate (%)', fontsize=10, fontweight='bold')
+    ax.set_xticks(x)
+    ax.set_xticklabels([run_labels.get(rid, rid) for rid in run_ids])
+    ax.set_title('Overall Refusal by Runtime Tool Mode', fontsize=12, fontweight='bold')
+    ax.legend(title='Mode')
+    ax.set_ylim(0, 105)
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    return fig
+
+
 def fig_overall_split(comparison: Dict, run_ids: List[str], run_labels: Dict[str, str]):
     # Plain overall
     xs_p, ys_p, yerr_p = [], [], [[], []]
@@ -502,8 +582,9 @@ with st.sidebar:
         categories = all_categories
 
 # Tabs
-overview, per_category, effects, significance, summary = st.tabs([
+overview, by_mode, per_category, effects, significance, summary = st.tabs([
     "Overview",
+    "By-Mode",
     "Per-Category",
     "Effects & Ranking",
     "Significance",
@@ -539,6 +620,17 @@ with overview:
                 st.info("Tool overall requires 'tool' in comparison_plus.json for selected runs.")
     else:
         st.info("Split overall charts require comparison_plus.json.")
+
+with by_mode:
+    st.subheader("Overall Refusal by Runtime Tool Mode")
+    if selected_runs:
+        fig = fig_overall_by_mode(detailed, selected_runs, run_labels)
+        if fig is not None:
+            st.pyplot(fig)
+        else:
+            st.info("No by-mode aggregates found in analysis_plus.json for selected runs.")
+    else:
+        st.info("Select runs to visualize by runtime_tool_mode.")
 
 with per_category:
     st.subheader("Category Heatmap across Runs")

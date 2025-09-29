@@ -12,6 +12,7 @@ from .deepseek import (
 from .ollama_gen import generate_for_prompts as ollama_generate_for_prompts
 from .ollama_client import call_ollama, DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_BASE_URL
 from .tools import get_fake_tools
+from .mcp_tools import get_mcp_tools_from_file, get_mcp_tools_from_env
 from .utils import ensure_dir, write_jsonl
 
 
@@ -92,8 +93,30 @@ def run_inference(
     ollama_model: str = DEFAULT_OLLAMA_MODEL,
     out_jsonl_path: str = None,
     request_interval_s: float = 0.0,
+    tool_mode: str = "fake",
+    mcp_registry_json: str = None,
 ) -> List[Dict]:
-    tools = get_fake_tools()
+    # Select tools and tool_choice behavior based on tool_mode
+    tool_mode_eff = (tool_mode or "fake").lower()
+    if tool_mode_eff == "none":
+        tools = []
+        tool_choice = None
+        mcp_source = None
+    elif tool_mode_eff == "mcp":
+        if mcp_registry_json:
+            tools = get_mcp_tools_from_file(mcp_registry_json)
+            mcp_source = f"file:{mcp_registry_json}"
+        else:
+            tools = get_mcp_tools_from_env()
+            url = os.getenv("MCP_REGISTRY_URL")
+            mcp_source = f"env:{url}" if url else "builtin"
+        tool_choice = "auto"
+    else:
+        tools = get_fake_tools()
+        tool_choice = "auto"
+        mcp_source = None
+
+    runtime_client = "ollama"
     outputs: List[Dict] = []
 
     gen_list = list(generated_pairs)
@@ -103,7 +126,7 @@ def run_inference(
             system=system_prompt,
             model=ollama_model,
             tools=tools,
-            tool_choice="auto",
+            tool_choice=tool_choice,
             temperature=None,
             request_interval_s=request_interval_s,
         )
@@ -148,6 +171,10 @@ def run_inference(
             "source": src,
             "prompt": prompt,
             "system_prompt": system_prompt,
+            # Runtime labels
+            "runtime_client": runtime_client,
+            "runtime_tool_mode": tool_mode_eff,
+            "mcp_registry_source": mcp_source,
             # Primary response text (may be empty if tool calls are proposed)
             "response_text": text,
             "refusal_strict": is_refusal_strict(text),

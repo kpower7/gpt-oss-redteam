@@ -17,3 +17,5 @@ examples/
 results/visualization_generator.py
 visualizations/
 findings/
+colab_pilot.ipynb
+colab_pilot.py

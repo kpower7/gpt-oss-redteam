@@ -59,6 +59,8 @@ def cmd_infer(args: argparse.Namespace) -> None:
         ollama_model=args.ollama_model,
         out_jsonl_path=out_file,
         request_interval_s=args.inference_interval,
+        tool_mode=args.tool_mode,
+        mcp_registry_json=args.mcp_registry_json,
     )
     print(f"Ran inference on {len(pairs)} prompts -> {out_file}")
 
@@ -102,6 +104,8 @@ def cmd_all(args: argparse.Namespace) -> None:
         ollama_model=args.ollama_model,
         out_jsonl_path=out_infer,
         request_interval_s=args.inference_interval,
+        tool_mode=args.tool_mode,
+        mcp_registry_json=args.mcp_registry_json,
     )
 
     # 3) Analyze
@@ -142,6 +146,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--system-prompt", default=None)
     s.add_argument("--ollama-model", default=os.getenv("OLLAMA_MODEL", "gpt-oss:20b"))
     s.add_argument("--inference-interval", type=float, default=0.0, help="sleep seconds between Ollama calls")
+    s.add_argument("--tool-mode", choices=["none", "fake", "mcp"], default=os.getenv("TOOL_MODE", "fake"), help="Tool exposure during runtime: none=fallback to pure text, fake=OpenAI-style fake tools (default), mcp=use MCP-derived registry")
+    s.add_argument("--mcp-registry-json", default=None, help="Path to MCP registry JSON (static stub). Used when --tool-mode=mcp.")
     s.add_argument("--out-dir", default=None)
     s.set_defaults(func=cmd_infer)
 
@@ -163,6 +169,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--system-prompt", default=None)
     s.add_argument("--ollama-model", default=os.getenv("OLLAMA_MODEL", "gpt-oss:20b"))
     s.add_argument("--inference-interval", type=float, default=0.0)
+    s.add_argument("--tool-mode", choices=["none", "fake", "mcp"], default=os.getenv("TOOL_MODE", "fake"))
+    s.add_argument("--mcp-registry-json", default=None)
     s.add_argument("--out-dir", default=None)
     s.set_defaults(func=cmd_all)
 
