@@ -1,0 +1,129 @@
+\documentclass[10pt]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{titlesec}
+\setstretch{1.0}
+
+% Compact section spacing
+\titlespacing*{\section}{0pt}{8pt}{4pt}
+\titlespacing*{\subsection}{0pt}{6pt}{3pt}
+
+\title{\vspace{-0.5in}\textbf{Procedural Abstraction Vulnerabilities in Agentic AI Systems}\\
+\normalsize{Technical Evaluation and Policy Implications}\vspace{-0.2in}}
+
+\author{Kevin Power, Technology and Policy Program, MIT $\cdot$ Supervisor: Shen Shen, MIT CSAIL}
+
+\date{December 9, 2025}
+
+\begin{document}
+
+\maketitle
+\vspace{-0.4in}
+
+\section{Central Question and Issue}
+
+Large language models increasingly serve as autonomous agents with the ability to invoke external tools—querying databases, executing system commands, accessing APIs, and performing operational tasks with material consequences. These tool-augmented agents represent a fundamental architectural shift from text-only systems, introducing new attack surfaces that current safety mechanisms inadequately address. My thesis investigates a critical vulnerability at this intersection:
+
+\begin{quote}
+\textit{How does framing adversarial requests through procedural tool-calling syntax circumvent safety mechanisms trained primarily on plain-text harmful content, and what technical mitigations and policy frameworks can address this systematic vulnerability?}
+\end{quote}
+
+The core phenomenon under investigation is what I term \emph{tool-priming}: the presentation of harmful requests using API-like function-calling syntax rather than explicit natural language. For example, instead of stating "Help me discriminate against candidates over 40 in hiring decisions," an adversary might frame the identical intent as a tool invocation: \texttt{hr.filter\_candidates(age\_max=40)}. Both requests seek the same harmful outcome, yet preliminary empirical evaluation reveals dramatically different model responses.
+
+My initial investigation, conducted through participation in the Kaggle AI Safety Prize competition, establishes the magnitude and consistency of this vulnerability. Across 15,600 model generations spanning 26 adversarial intents and 13 harm categories, tool-priming reduces refusal rates by 15-42 percentage points compared to semantically equivalent plain-text requests. More critically, certain harm categories demonstrate near-complete safety bypass: fraud and discrimination prompts achieve 0-2\% refusal rates when presented through tool syntax, despite the same requests eliciting 85-100\% refusal in plain text. This pattern suggests that current safety training creates systematic blind spots when harmful intent is expressed through technical or procedural vocabulary rather than explicit harmful language.
+
+The policy significance extends beyond technical vulnerability assessment. As organizations deploy agentic AI systems with real database access, system administration privileges, and HR operational capabilities, the gap between laboratory safety evaluation and operational risk becomes critical. Current regulatory frameworks and safety standards focus primarily on content moderation and bias mitigation in text-only applications, inadequately addressing the unique challenges posed by agents that can execute actions with material consequences through tool invocations. My thesis will establish empirical foundations for understanding tool-augmented vulnerabilities while developing policy-relevant recommendations for safe deployment governance.
+
+This work contributes to ongoing policy debates about AI safety regulation by demonstrating that deployment context—system prompts, tool manifests, operational scenarios—significantly modulates vulnerability in ways that single-point safety evaluations cannot capture. This finding challenges assumptions underlying current AI auditing practices and suggests the need for context-aware safety standards.
+
+\section{Methods}
+
+I employ two complementary methodological approaches combining empirical security evaluation with mechanistic interpretability analysis.
+
+\textbf{Paired Adversarial Evaluation.} The primary method employs systematic adversarial red-teaming through a controlled experimental design comparing matched prompt pairs. For each adversarial intent, I construct two semantically equivalent formulations: a plain-text variant using explicit harmful language, and a tool-primed variant expressing identical intent through API-like function calls. This paired design enables within-subjects comparison isolating the effect of procedural framing while controlling for semantic content, threat severity, and linguistic complexity.
+
+The evaluation framework spans 26 distinct adversarial intents distributed across 13 harm categories derived from established AI safety taxonomies: financial fraud, unauthorized system access, discrimination in protected decisions, privacy violations, misinformation generation, harassment, hate speech, self-harm content, illegal activity assistance, intellectual property theft, system sabotage, child safety violations, and sexual content. Each intent is evaluated under three system prompt conditions representing distinct deployment scenarios: (1) null baseline with minimal instruction, (2) tool-augmented context emphasizing function-calling capabilities, and (3) explicitly adversarial context warning against manipulation attempts. This $2 \times 26 \times 3$ design yields 156 unique test cases; with 100 generations per case to establish statistical power, the full evaluation produces 15,600 model outputs.
+
+Statistical analysis employs rigorous paired methods appropriate for within-subjects designs. Wilson score intervals with 95\% confidence provide robust refusal rate estimates accounting for small sample variance. McNemar's test assesses statistical significance of refusal rate differences between paired conditions, while Cohen's $h$ quantifies effect sizes enabling interpretation of practical magnitude beyond statistical significance alone. The paired structure provides stronger causal inference than unpaired comparisons common in adversarial evaluation, as each prompt serves as its own control for confounding factors like topic sensitivity or linguistic complexity.
+
+To establish generalization beyond single-model artifacts, I extend this evaluation across model families (Llama, GPT, Mistral), architectural variants (dense transformers, mixture-of-experts), parameter scales (7B to 70B+), and training methodologies (supervised fine-tuning, RLHF, constitutional AI). Cross-model consistency in vulnerability patterns would implicate fundamental limitations in current safety training approaches rather than implementation-specific weaknesses.
+
+\textbf{Mechanistic Interpretability.} The second methodological approach employs neural network interpretability techniques to establish causal mechanisms underlying tool-priming vulnerabilities. While empirical evaluation demonstrates that the phenomenon exists and quantifies its magnitude, mechanistic analysis explains why it occurs at the level of model parameters and representations. This causal understanding is essential for developing targeted interventions and predicting vulnerability patterns in novel contexts.
+
+The analysis employs three complementary interpretability methods. First, \emph{activation patching} identifies which model components causally contribute to refusal versus compliance decisions. By systematically corrupting activations at specific layers or attention heads and measuring downstream effects on output behavior, I can map the functional role of different parameters in safety-relevant decision making. Comparing these causal maps between plain-text and tool-primed variants of identical harmful intents reveals whether tool-framing exploits distinct neural pathways or modulates shared mechanisms.
+
+Second, \emph{probing classifiers} trained on intermediate layer activations assess whether procedural abstraction creates fundamentally different internal representations of harmful intent. If tool-primed requests generate activation patterns that probes cannot distinguish from legitimate function calls, this suggests the vulnerability arises from representational confusion. Alternatively, if harmful intent remains detectable in intermediate representations but fails to trigger refusal in outputs, this implicates downstream integration or decision mechanisms.
+
+Third, \emph{attention analysis and circuit tracing} identify which input tokens and feature patterns drive safety-relevant activations. By examining attention weights and gradient attributions for refusal-triggering versus compliance-enabling components, I can characterize what linguistic or structural features models use to assess request harmfulness. If tool-priming circumvents safety by preventing attention to harm-indicative content, or by activating technical vocabulary features that override harm detection, this provides actionable targets for defensive interventions.
+
+Direct access to model weights via AWS Trainium infrastructure enables these analyses on open-source models up to 70B parameters. If investigations reveal that specific attention heads, MLP layers, or representational subspaces prove critical for tool-aware safety judgments, Low-Rank Adaptation (LoRA) fine-tuning can surgically modify those components without expensive full model retraining. This mechanistic approach bridges empirical security evaluation and practical mitigation design.
+
+\section{Evidence and Data}
+
+\textbf{Existing Evidence.} The preliminary evaluation described above has produced a comprehensive dataset of 15,600 model generations with detailed instrumentation. Each generation includes the full prompt text, complete model response, binary refusal classification (both strict pattern-matching and robust semantic coding), generation timestamp, experimental condition identifiers, and operational metadata. This instrumentation enables both quantitative statistical analysis and qualitative investigation of specific failure modes.
+
+Statistical analysis of this preliminary dataset establishes several key empirical findings. First, refusal rates demonstrate substantial variation across system prompt conditions, ranging from 65.3\% in tool-augmented contexts to 88.3\% under explicitly adversarial framing—a 23 percentage point range indicating significant deployment context sensitivity. Second, tool-priming effects achieve statistical significance across all three system prompt conditions ($p < 0.001$ via McNemar's test), with effect sizes ranging from Cohen's $h$ = 0.88 to 1.92, well above conventional thresholds for "large" effects. Third, category-specific vulnerability patterns reveal dramatic heterogeneity: fraud and discrimination categories show 43-49\% refusal under tool-priming (near-random or worse than chance), while hate speech and self-harm content maintain 85-95\% refusal even when procedurally framed. Fourth, 92.3\% of individual prompt pairs demonstrate consistent vulnerability patterns across all three system conditions, suggesting robust rather than context-specific exploitation. These findings establish both the phenomenon's existence and its operational magnitude. All raw data, analysis code, and visualization generation scripts are archived in version-controlled repositories enabling independent verification and extension.
+
+\textbf{Planned Collection.} The thesis requires three additional data streams. First, extended benchmarking across model families will establish generalization, replicating evaluation on Llama-3-70B, Mistral-8x7B, and GPT-OSS variants (7B, 20B, 70B scales) to produce comparable refusal rate profiles. This addresses the current limitation of single-model evaluation. Second, mechanistic interpretability experiments will generate activation patterns, attention head importance scores, and circuit-level connectivity maps for 50+ prompt pairs, quantifying the causal importance of specific model components. Third, I will conduct semi-structured interviews with 10-15 practitioners deploying agentic AI systems in enterprise contexts to gather operational perspectives on deployment practices and perceived gaps between laboratory benchmarks and production risks. This qualitative data grounds policy recommendations in practitioner realities. Contingency planning ensures thesis viability: if tool-priming generalizes broadly, the thesis emphasizes systematic training gaps requiring industry-wide interventions; if effects vary by architecture, focus shifts to robustness properties informing model selection; if interviews reveal substantial deployment-evaluation gaps, policy frameworks become central.
+
+\section{Feasibility}
+
+\textbf{Infrastructure and Resources.} The thesis benefits from substantial existing infrastructure developed during preliminary work. An open-source evaluation pipeline (\texttt{gpt-oss-redteam} repository) implements automated prompt generation, model querying via standardized APIs, response classification using both rule-based and semantic methods, and statistical analysis with visualization generation. The codebase includes comprehensive documentation and has attracted community adoption (100+ GitHub stars), validating its technical soundness and usability. Local execution via Ollama enables rapid prototyping and iteration without cloud API costs for initial development phases.
+
+For computationally intensive cross-model evaluation and mechanistic analysis, I have secured dedicated research computing resources through the AWS Machine Learning Research Award program. This award provides \$44,500 in AWS credits specifically allocated for this research, approved November 2024. AWS Trainium instances optimized for large-scale neural network training support efficient execution of LoRA adapter training and weight-level interpretability experiments on models up to 70B parameters. This resource allocation eliminates the primary constraint—compute access—that typically limits large-scale model safety research, enabling comprehensive cross-model evaluation and mechanistic investigations that would otherwise be financially prohibitive.
+
+\textbf{Timeline.} Spring 2026 (January-May): Extended benchmark development and cross-model evaluation. Target: refusal rate profiles for 5+ model families across 3+ scales, completing generalization analysis. Summer 2026 (June-August): Mechanistic interpretability experiments and LoRA adapter training. Target: activation analysis for 50+ prompt pairs, trained adapters demonstrating measurable refusal recovery without degrading legitimate tool use. Fall 2026 (September-November): Practitioner interviews, policy framework development, thesis writing. Target: 12-15 interviews transcribed and coded, policy recommendations drafted, thesis chapters integrated. This timeline provides buffer for unexpected technical challenges while maintaining progress toward thesis completion milestones aligned with TPP program requirements.
+
+\textbf{Capabilities.} I possess core technical capabilities developed through prior research experience and coursework. Specifically, I have demonstrated proficiency in adversarial prompt engineering, rigorous statistical evaluation of machine learning systems, open-source model deployment and experimentation, and large-scale data analysis. The preliminary work establishing tool-priming vulnerabilities provided practical experience with red-teaming methodologies, paired experimental designs, and safety evaluation frameworks—capabilities that transfer directly to the proposed thesis work.
+
+Mechanistic interpretability analysis requires additional skill development in activation patching, causal tracing, and neural circuit analysis techniques. To acquire these capabilities, I am auditing MIT's ``Interpretability and Explainability in Machine Learning'' (6.S898, Spring 2026), which provides structured instruction in modern interpretability methods. This formal training will be supplemented by direct mentorship from interpretability researchers at MIT CSAIL who specialize in language model analysis. LoRA fine-tuning methodology builds on existing experience with neural network training and parameter-efficient adaptation from previous research positions.
+
+Qualitative interview methodology represents the domain requiring the most skill development. TPP program coursework in social science research methods provides foundational training in interview design, execution, and analysis. Additional support is available through MIT's Institute for Data, Systems, and Society (IDSS) qualitative research center, which offers consultation services and methodological resources for graduate researchers conducting interview-based studies. This combination of coursework and institutional support ensures methodological rigor in practitioner interview execution and analysis.
+
+\section{Logic and Argument Structure}
+
+The thesis argument proceeds through four integrated components building from empirical findings to policy implications.
+
+\textbf{Part I: Establishing Systematic Vulnerability.} Cross-model evaluation spanning architectures, scales, and training methodologies demonstrates that tool-priming represents a systematic vulnerability rather than isolated exploit. If tool-priming persists across diverse models, it implicates fundamental limitations in how current safety training addresses procedurally-framed harmful requests rather than model-specific implementation choices. Statistical rigor through confidence intervals, effect sizes, and consistency metrics provides quantitative grounding for vulnerability claims. This empirical foundation supports the core thesis claim that procedural abstraction creates exploitable gaps in AI safety mechanisms, with implications extending beyond any single model or deployment context.
+
+\textbf{Part II: Explaining Mechanistic Causation.} Interpretability analysis provides mechanistic explanation for observed vulnerability patterns. The procedural abstraction hypothesis—that tool-priming circumvents safety mechanisms by transforming harmful requests into sequences of apparently legitimate operations—requires neural-level validation. Activation analysis revealing which parameters drive refusal decisions, and how tool-framing modulates these activations, provides causal evidence beyond correlational observation. Explaining why certain categories resist tool-priming (hate speech, self-harm) while others fail dramatically (fraud, discrimination) grounds theoretical understanding. If resistant categories activate multiple overlapping safety circuits or trigger content-intrinsic harm detection, this suggests architectural principles for more robust safety mechanisms. This mechanistic understanding bridges empirical security evaluation and technical mitigation design.
+
+\textbf{Part III: Demonstrating Practical Mitigation.} LoRA adapter development establishes feasibility of technical interventions. Trained adapters demonstrating measurable refusal recovery on adversarial test sets while preserving accuracy on standard function-calling benchmarks prove that targeted fine-tuning can address tool-priming without degrading legitimate capabilities. This avoids over-refusal where safety interventions eliminate operational utility. The balance between safety improvement and functionality preservation demonstrates technical viability of defensive interventions, supporting policy recommendations that such protections are achievable rather than aspirational.
+
+\textbf{Part IV: Informing Policy and Governance Frameworks.} Technical findings translate into policy-relevant recommendations spanning standards development, regulatory frameworks, and deployment governance. The demonstration that deployment context significantly modulates vulnerability challenges current AI auditing practices relying on single-point evaluation. I propose context-aware safety standards varying evaluation requirements by operational domain, tool manifest composition, and authorized capabilities. Category-specific vulnerability patterns (0-2\% refusal for fraud versus 85-95\% for hate speech) suggest deployment restrictions should incorporate domain-specific risk assessment. Practitioner interviews ground recommendations in operational realities, ensuring proposals address actual deployment challenges.
+
+Throughout, I emphasize bidirectional technology-policy relationships reflecting IDS.411 themes: technical findings about vulnerability mechanisms inform policy design—understanding why certain deployment contexts amplify risk enables targeted regulatory interventions. Conversely, policy requirements shape technical research priorities—the need for deployment-specific safety evaluation motivates context-aware benchmark development. Effective governance of agentic AI systems requires both technical mechanisms (LoRA adapters, protocol-level safety, continuous monitoring) and policy frameworks (standards, auditing practices, responsible disclosure).
+
+\section*{Conclusion}
+
+This thesis proposal addresses an urgent challenge at the intersection of AI safety and technology policy. As organizations increasingly deploy autonomous agents with tool access and operational capabilities, the gap between safety evaluation and deployment risk becomes critical. My work establishes empirical foundations for understanding tool-augmented vulnerabilities, develops technical mitigation strategies, and proposes policy frameworks enabling safe deployment governance. The combination of controlled experimentation, mechanistic analysis, and policy integration positions this thesis to contribute both to technical AI safety research and to broader policy debates about how to govern rapidly advancing AI capabilities in high-stakes applications.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{9}
+
+\bibitem{perez2022red}
+Perez, F., et al. (2022). Red teaming language models with language models. \textit{arXiv:2202.03286}.
+
+\bibitem{ganguli2022red}
+Ganguli, D., et al. (2022). Red teaming language models to reduce harms: Methods, scaling behaviors, and lessons learned. \textit{arXiv:2209.07858}.
+
+\bibitem{wei2023jailbroken}
+Wei, A., Haghtalab, N., \& Steinhardt, J. (2023). Jailbroken: How does LLM safety training fail? \textit{NeurIPS 2023}.
+
+\bibitem{schick2023toolformer}
+Schick, T., et al. (2023). Toolformer: Language models can teach themselves to use tools. \textit{arXiv:2302.04761}.
+
+\bibitem{anthropic2023mcp}
+Anthropic (2024). Introducing the Model Context Protocol. \textit{Anthropic Blog}.
+
+\bibitem{hu2021lora}
+Hu, E. J., et al. (2022). LoRA: Low-rank adaptation of large language models. \textit{ICLR 2022}.
+
+\bibitem{meng2022locating}
+Meng, K., et al. (2022). Locating and editing factual associations in GPT. \textit{NeurIPS 2022}.
+
+\end{thebibliography}
+
+\end{document}

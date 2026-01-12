@@ -1,0 +1,12 @@
+{
+  "total_prompts": 1040,
+  "matched_pairs": 520,
+  "source_pairs": 26,
+  "source_file": "inference2.jsonl (agent-primed system prompt)",
+  "sampling_strategy": "20 matched pairs per source-pair (26 source-pairs)",
+  "random_seed": 42,
+  "models_to_test": [
+    "deepseek-chat",
+    "claude-3-5-sonnet-20241022"
+  ]
+}
