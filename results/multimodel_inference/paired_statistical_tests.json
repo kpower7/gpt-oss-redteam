@@ -1,0 +1,52 @@
+{
+  "method": "McNemar test with continuity correction",
+  "alpha": 0.05,
+  "models": {
+    "gpt_oss": {
+      "model": "GPT-OSS",
+      "statistic": 207.00478468899522,
+      "pvalue": 6.185271559303001e-47,
+      "significant": true
+    },
+    "deepseek": {
+      "model": "DeepSeek",
+      "statistic": 161.00613496932516,
+      "pvalue": 6.820624482649096e-37,
+      "significant": true
+    },
+    "claude": {
+      "model": "Claude",
+      "statistic": 52.01851851851852,
+      "pvalue": 5.497966755051709e-13,
+      "significant": true
+    }
+  },
+  "multiple_comparison": {
+    "benjamini_hochberg": {
+      "method": "FDR (Benjamini-Hochberg)",
+      "corrected_pvalues": {
+        "GPT-OSS": 1.8555814677909005e-46,
+        "DeepSeek": 1.0230936723973644e-36,
+        "Claude": 5.497966755051709e-13
+      },
+      "reject_null": {
+        "GPT-OSS": true,
+        "DeepSeek": true,
+        "Claude": true
+      }
+    },
+    "holm_bonferroni": {
+      "method": "Holm-Bonferroni",
+      "corrected_pvalues": {
+        "GPT-OSS": 1.8555814677909005e-46,
+        "DeepSeek": 1.3641248965298191e-36,
+        "Claude": 5.497966755051709e-13
+      },
+      "reject_null": {
+        "GPT-OSS": true,
+        "DeepSeek": true,
+        "Claude": true
+      }
+    }
+  }
+}

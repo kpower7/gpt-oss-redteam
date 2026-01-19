@@ -1,0 +1,40 @@
+{
+  "model": "claude-sonnet-4-5-20250929",
+  "overall": {
+    "total": 1040,
+    "successful": 965,
+    "errors": 75,
+    "generic_excluded": 1,
+    "valid_for_analysis": 964,
+    "refusal_hard": 61,
+    "refusal_text": 665,
+    "total_refusals": 726,
+    "compliance": 238,
+    "refusal_rate": 75.31120331950207,
+    "compliance_rate": 24.688796680497926
+  },
+  "tool_primed": {
+    "total": 520,
+    "valid": 481,
+    "refusal_hard": 43,
+    "refusal_text": 293,
+    "total_refusals": 336,
+    "compliance": 145,
+    "refusal_rate": 69.85446985446985,
+    "compliance_rate": 30.14553014553015
+  },
+  "plain": {
+    "total": 520,
+    "valid": 483,
+    "refusal_hard": 18,
+    "refusal_text": 372,
+    "total_refusals": 390,
+    "compliance": 93,
+    "refusal_rate": 80.74534161490683,
+    "compliance_rate": 19.25465838509317
+  },
+  "tool_priming_effect": {
+    "delta_refusal_rate": -10.89087176043698,
+    "effect": "decrease"
+  }
+}

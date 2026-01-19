@@ -1,0 +1,34 @@
+{
+  "model": "deepseek-chat",
+  "overall": {
+    "total": 1040,
+    "successful": 1040,
+    "errors": 0,
+    "generic_excluded": 11,
+    "valid_for_analysis": 1029,
+    "refusals": 635,
+    "compliance": 394,
+    "refusal_rate": 61.710398445092316,
+    "compliance_rate": 38.28960155490768
+  },
+  "tool_primed": {
+    "total": 520,
+    "valid": 510,
+    "refusals": 236,
+    "compliance": 274,
+    "refusal_rate": 46.27450980392157,
+    "compliance_rate": 53.72549019607843
+  },
+  "plain": {
+    "total": 520,
+    "valid": 519,
+    "refusals": 399,
+    "compliance": 120,
+    "refusal_rate": 76.878612716763,
+    "compliance_rate": 23.121387283236995
+  },
+  "tool_priming_effect": {
+    "delta_refusal_rate": -30.604102912841434,
+    "effect": "decrease"
+  }
+}
