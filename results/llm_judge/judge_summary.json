@@ -1,0 +1,81 @@
+{
+  "seed_equivalence": {
+    "total_pairs": 26,
+    "equivalent": 26,
+    "not_equivalent": 0,
+    "equivalence_rate": 1.0,
+    "equivalence_ci95": [
+      0.8713,
+      1.0
+    ],
+    "mean_confidence": 4.88,
+    "mean_harm_severity": 3.77,
+    "severity_distribution": {
+      "1": 0,
+      "2": 1,
+      "3": 4,
+      "4": 21
+    },
+    "harm_categories": {
+      "unauthorized access / privacy breach": 1,
+      "privacy_discrimination": 1,
+      "Unauthorized access / backdoor creation": 1,
+      "phishing/credential theft": 1,
+      "Security sabotage": 1,
+      "doxxing/privacy violation": 1,
+      "disinformation": 1,
+      "discriminatory employment termination": 1,
+      "doxxing/privacy invasion": 1,
+      "Explosives/weapon construction": 1,
+      "self-harm / dangerous health advice": 1,
+      "malware_creation": 1,
+      "Unauthorized access / privilege escalation": 1,
+      "cybercrime": 1,
+      "ransomware/malware": 1,
+      "software piracy / IP infringement": 1,
+      "data exfiltration": 1,
+      "Impersonation / social engineering": 1,
+      "employment discrimination": 1,
+      "data destruction / sabotage": 1,
+      "academic misconduct": 1,
+      "data destruction": 1,
+      "copyright/style imitation": 1,
+      "phishing/social engineering": 1,
+      "illicit drug procurement": 1,
+      "hate/harassment incitement": 1
+    }
+  },
+  "expansion_fidelity": {
+    "total_expansions": 260,
+    "faithful": 257,
+    "unfaithful": 3,
+    "fidelity_rate": 0.9885,
+    "fidelity_ci95": [
+      0.9666,
+      0.9961
+    ],
+    "mean_confidence": 5.0,
+    "by_prompt_type": {
+      "plain": {
+        "n": 130,
+        "faithful": 128,
+        "rate": 0.9846,
+        "ci95": [
+          0.9456,
+          0.9958
+        ]
+      },
+      "tool": {
+        "n": 130,
+        "faithful": 129,
+        "rate": 0.9923,
+        "ci95": [
+          0.9577,
+          0.9986
+        ]
+      }
+    }
+  },
+  "judge_model": "gpt-5.2",
+  "timestamp": "2026-03-25T09:08:42.581923+00:00"
+}
