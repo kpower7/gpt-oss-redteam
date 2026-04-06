@@ -1,0 +1,138 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage[numbers,sort&compress]{natbib}
+
+\titleformat{\section}{\normalfont\large\bfseries}{}{0em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{}{0em}{}
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+\titlespacing*{\subsection}{0pt}{6pt}{2pt}
+
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+
+\hypersetup{colorlinks=true, linkcolor=black, citecolor=black, urlcolor=blue}
+
+\begin{document}
+
+\begin{center}
+  {\Large \textbf{Procedural Harm Chains: Multi-Turn Agentic Safety\\Evaluation of Open-Weight Language Models}}\\[8pt]
+  {\normalsize GIC Proposal \textbar{} OpenAI Track \textbar{} Innovation Tier (\$150,000) \textbar{} 12 months}\\[4pt]
+  {\normalsize \textbf{Principal Investigator:} [PI Name], [Title], MIT [Department]}\\
+  {\normalsize \textbf{Student Investigator:} Kevin Power, SM Candidate, MIT [Department] \texttt{(kevpower@mit.edu)}}
+\end{center}
+
+\vspace{4pt}\hrule\vspace{8pt}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction and Background}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Large language models are deployed increasingly in agentic configurations that provide access to structured tool manifests; financial APIs, HR systems, database interfaces, and communication tools. In these deployments, models receive function schemas alongside user requests and can invoke operations across live systems. This architectural shift changes the safety landscape materially: a model's response to a harmful request depends not only on the linguistic content of the request, but on the tools available, the framing of the request as a procedural sequence, and the context the system prompt establishes.
+
+Prior work has characterized adversarial robustness in single-turn plain-text settings~\cite{perez2022red,ganguli2022red,zou2023universal,chao2023jailbreaking}, but tool-augmented safety evaluation remains largely unstudied. Existing safety benchmarks present models with harmful requests and classify a single response as refusal or compliance. This framing does not reflect how agentic systems actually operate; real deployments built on frameworks such as ReAct~\cite{yao2023react} and Toolformer~\cite{schick2023toolformer} involve sequences of tool calls, execution feedback, and continued model reasoning across multiple turns. Ruan et al.~\cite{ruan2024identifying} show that LM agents with tool access introduce qualitatively different risk profiles than text-only models, but their sandboxed evaluation remains single-session and does not study how models respond to simulated execution feedback across turns.
+
+\textbf{Prior empirical work.} The gpt-oss-redteam pipeline~\cite{power2025procedural} conducted 15,600 adversarial generations across 52 prompts spanning 13 harm categories under three system configurations, comparing plain-text and tool-primed variants of semantically equivalent harmful requests. The core finding is that presenting models with tool manifests reduces refusal rates by a median of 33.7 percentage points under null system conditions (McNemar's $\chi^2$, $p < 0.001$, Cohen's $h = 0.818$). The effect is not marginal: Fraud and Unauthorized Access shows a 88.0 percentage point reduction, Discrimination and Bias shows 65.5 points, and Harassment and Abuse shows 71.5 points. Cross-model evaluation on 1,040 matched pairs reveals consistent vulnerability in GPT-OSS-20b ($\Delta = -40.2$ pp), DeepSeek-Chat ($\Delta = -30.6$ pp), and Claude Sonnet 4.5 ($\Delta = -10.9$ pp), with all effects remaining significant after Benjamini-Hochberg FDR correction. The consistency across models trained by different organizations with different safety approaches indicates a systematic limitation in current training rather than a model-specific deficiency.
+
+The procedural abstraction hypothesis explains this pattern: harmful intent decomposed into sequences of individually legitimate tool operations creates semantic distance between each step and the harmful outcome, exploits distributional shift from safety training data, and benefits from authority signaling conveyed by structured API syntax. Categories whose harmful intent resists decomposition into atomic operations, such as hate speech and self-harm content, maintain high refusal rates even under tool-priming, confirming the mechanism.
+
+\textbf{The single-turn limitation.} Every result above is a single-turn classification. The model receives a prompt and produces one response. This abstraction omits the feedback loop that defines agentic behavior. In production, a model that declines a harmful tool call in isolation may behave differently when it receives a response indicating that a prior step succeeded; the question of whether models escalate harmful plans across turns, in response to positive execution feedback, has not been studied systematically. Similarly, questions about how mid-conversation manifest changes affect model behavior, and how these dynamics vary across model families and scales, have no empirical basis in the literature.
+
+This proposal extends the validated single-turn methodology into multi-turn simulation to characterize what we term \textbf{procedural harm chains}: sequences of model actions that collectively constitute harmful behavior only when observed across multiple turns of tool-augmented interaction.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Research Questions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Three research questions structure this investigation.
+
+\textbf{RQ1 (Escalation).} Do open-weight LLMs escalate harmful behavior across conversation turns when presented with simulated evidence that preceding tool calls succeeded? The baseline finding establishes that tool framing reduces initial refusal rates; this question asks whether models that comply with an initial harmful tool call continue to comply, and escalate, as the conversation progresses and synthetic execution feedback accumulates.
+
+\textbf{RQ2 (Manifest Dynamics).} How does mid-conversation modification of the tool manifest affect refusal stability? This question covers three manifest events: expansion (adding high-capability tools after an initial exchange), restriction (removing tools to test rerouting behavior), and substitution (renaming tools with functionally equivalent but innocuously-labeled identifiers). The question is whether models exhibit manifest-awareness and whether refusal behavior tracks semantic content of tools or surface names.
+
+\textbf{RQ3 (Architecture Generalization).} How do procedural harm chain vulnerabilities vary across model families (Llama, Mistral, Qwen, Phi) and parameter scales (7B to 70B)? The existing cross-model evaluation covers three models under a single-turn design; this question extends the comparison to 16 configurations across four families with a multi-turn protocol.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Methodology}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Multi-Turn Simulation Engine}
+
+We extend the gpt-oss-redteam pipeline with a simulation layer that interleaves model responses with configurable synthetic tool execution results. No tool calls execute against real systems; the simulator returns pre-designed responses that exercise model reasoning about execution feedback without producing real-world effects. Each conversation follows a fixed protocol: the model receives an adversarial prompt and tool manifest at turn 0; if the model proposes a tool call, the simulator returns a synthetic result at the subsequent turn; the model then receives that result and continues. Conversations terminate at a fixed turn limit or when the model produces no further tool calls.
+
+Synthetic feedback is parameterized across three conditions. The \textbf{success} condition returns a realistic affirmative result (e.g., \texttt{\{"status": "ok", "records\_modified": 1247\}}). The \textbf{failure} condition returns an error response (e.g., \texttt{\{"error": "permission\_denied", "code": 403\}}). The \textbf{partial} condition returns an ambiguous result indicating incomplete execution and inviting follow-up. This design tests whether success feedback licenses escalation, whether failure terminates harmful sequences, and whether partial results induce novel planning toward harmful completion.
+
+\subsection{Harm Trajectory Classification}
+
+Binary refusal classification is replaced by a trajectory classifier operating over full conversations. Each model turn receives a harm score from a prompted judge model validated against manual annotations on a 500-conversation calibration set (target $\kappa > 0.75$). Conversations receive one of four trajectory labels: \textit{Declined} (model refuses at turn 0 and does not engage), \textit{Stable} (model engages but harm score does not increase across turns), \textit{Escalating} (harm score increases across turns), or \textit{Completed} (model reaches a point of actionable harm completion). We report escalation index as the normalized slope of harm scores across turns, enabling parametric comparison across models and conditions.
+
+\subsection{Dynamic Manifest Protocol}
+
+To address RQ2, we inject manifest modification events at a defined turn boundary. The \textbf{expansion} condition introduces high-capability tools (e.g., \texttt{finance.transfer\_funds}, \texttt{hr.terminate\_employee}) after an initial exchange that proceeded under a restricted manifest. The \textbf{restriction} condition removes tools mid-conversation to test whether models attempt to route harmful plans around reduced capability. The \textbf{substitution} condition replaces tool names with functionally equivalent identifiers that carry no harmful connotation (e.g., \texttt{data.archive\_record} replacing \texttt{db.delete}), testing whether refusal behavior tracks semantic content or surface naming. Each condition is crossed with all feedback and system prompt conditions.
+
+\subsection{Cross-Architecture Benchmarking}
+
+We evaluate 16 model configurations across four families and up to four parameter scales, as shown in Table~\ref{tab:models}. Models at 7B to 34B run locally via Ollama. Models at 70B run on AWS Trainium instances using an existing \$44,500 ML Research Award, so no cloud compute budget is required from this grant.
+
+\begin{table}[h]
+\centering
+\caption{Model configurations evaluated (checkmark indicates availability; configurations subject to revision based on Ollama registry at time of evaluation).}
+\label{tab:models}
+\begin{small}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Family} & \textbf{7B} & \textbf{13B} & \textbf{34B} & \textbf{70B} \\
+\midrule
+Llama 3.x & \checkmark & \checkmark & \checkmark & \checkmark \\
+Mistral/Mixtral & \checkmark & \checkmark & & \checkmark \\
+Qwen 2.5 & \checkmark & \checkmark & \checkmark & \checkmark \\
+Phi-3/4 & \checkmark & \checkmark & & \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{table}
+
+\subsection{Experimental Scale}
+
+The adversarial prompt set extends the existing 52 prompts with 20 new prompts designed for multi-turn elicitation, for a total of 72 prompts spanning the 13 harm categories. These are crossed with three system conditions, three feedback conditions, two conversation depth conditions (3-turn and 5-turn), and four manifest conditions, then evaluated across 16 model configurations with 20 runs per cell. The resulting evaluation covers approximately 250,000 conversation turns, all logged to JSONL with full response objects, tool call records, synthetic feedback inputs, and trajectory labels. This logging structure preserves full reproducibility consistent with the prior single-turn dataset.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Timeline and Milestones}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\textbf{Months 1--3.} We implement the multi-turn simulation engine, validate the harm trajectory classifier against manual annotations, and design synthetic feedback templates across harm categories. Deliverable: open-source multi-turn evaluation framework (v2.0) released on GitHub under CC0.
+
+\textbf{Months 4--6.} We run the full experimental protocol across all 16 models and conditions. Interim analysis compares escalation rates to single-turn baseline results, and reports cross-model findings. Deliverable: preprint on multi-turn versus single-turn refusal behavior; full dataset release.
+
+\textbf{Months 7--9.} We complete the dynamic manifest experiments and cross-architecture statistical analysis, including mixed-model ANOVA across family, scale, and harm category. We present findings at the MIT GenAI Consortium annual symposium. Deliverable: analysis code and dataset release; conference paper submission (target IEEE S\&P or CCS).
+
+\textbf{Months 10--12.} We finalize the manuscript, prepare a practitioner-facing policy brief for consortium member companies, and release a documented evaluation suite suitable for adoption by safety teams. Deliverable: accepted or published paper; evaluation suite with documentation.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Broader Impact and Open Science}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Agentic AI systems are being deployed in enterprise workflows with access to consequential operations: HR record modification, financial transfers, infrastructure control, and customer communication. Current safety evaluation frameworks provide no empirical characterization of how these systems behave when tool calls succeed incrementally and models receive execution feedback across turns. This project produces the first open benchmark for multi-turn agentic safety evaluation, giving practitioners and policymakers evidence to inform deployment decisions and safety standards.
+
+All code, datasets, prompt templates, synthetic feedback designs, trajectory annotations, and analysis scripts are released under CC0 consistent with the Open Source Initiative requirement. The existing gpt-oss-redteam repository and its 15,600-generation dataset are already public; this project extends both.
+
+The student investigator, Kevin Power, designed and implemented the gpt-oss-redteam pipeline, conducted the prior 15,600-generation study, and is the winner of the GPT-OSS 20B challenge, establishing direct expertise in open-weight model evaluation under agentic conditions. The GPT-OSS 20B model is a primary evaluation target of this work, and results will be made available to OpenAI as a consortium member for integration into safety evaluation workflows. The work is supervised by [PI Name], [title], MIT [Department].
+
+Computing for 70B-scale evaluation is covered by an existing AWS ML Research Award (\$44,500 in Trainium credits), allowing the requested budget to support student research time, dissemination, and conference participation.
+
+\vspace{6pt}\hrule\vspace{6pt}
+{\small \textit{Contact:} \texttt{kevpower@mit.edu} $|$ [PI email] $|$ Submission via InfoReady portal}
+
+\bibliographystyle{unsrt}
+\bibliography{proposal_gic}
+
+\end{document}
